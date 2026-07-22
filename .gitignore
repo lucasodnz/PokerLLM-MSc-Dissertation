@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+*.log
+checkpoints/
+models/
+outputs/
+outputs/raw/
+datasets/
+*.safetensors
+*.pt
+*.pth
+*.bin
+wandb/
+.cache/
+*.tmp

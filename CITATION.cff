@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+authors:
+  - family-names: Diniz
+    given-names: Lucas de Oliveira
+title: "Learning Strategic Poker Decision-Making with Large Language Models"
+year: 2026
+type: software
