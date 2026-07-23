@@ -1,6 +1,0 @@
-{
-  "id": "sample_preflop_001",
-  "instruction": "You are playing No-Limit Texas Hold'em. Choose the optimal action for the current situation.",
-  "input": "Stack depth: 100bb. Position: button. Action: raise to 3bb.",
-  "label": "raise 3.0"
-}

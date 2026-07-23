@@ -1,79 +1,74 @@
-# PokerLLM Public Release
+# PokerLLM — MSc Dissertation Research
 
-This repository packages a lightweight, public-facing subset of the PokerLLM dissertation workflow for inspection and documentation. It is derived from the canonical dissertation workspace and the frozen experiment workspace, but it intentionally excludes trained model weights, full datasets, checkpoints, optimizer state, and large raw prediction dumps.
+Code accompanying the MSc dissertation:
 
-## Dissertation context
+**Learning Strategic Poker Decision-Making with Large Language Models**
 
-This work studies whether large language models can learn strategic poker decision-making, with emphasis on action selection and bet sizing. The materials in this release are aligned with the final dissertation analysis and the canonical figures and tables prepared for the dissertation.
+This project investigates open large language models as predictors of strategic decisions in 6-max No-Limit Texas Hold'em. It compares few-shot prompting with supervised fine-tuning and evaluates categorical action prediction separately from numerical bet and raise sizing.
 
-## Research objective
+This repository presents one focused MSc research project within a broader research agenda on poker, imperfect-information games, and large language models.
 
-The goal of the release is to provide:
-- analysis, evaluation, and training-reference scripts;
-- methodological documentation;
-- lightweight robustness and ablation notes; and
-- one illustrative sample record for quick inspection.
+## Main Contributions
 
-## Dataset source and citation
+- A hybrid evaluation pipeline that selects actions using log-probabilities over the legal action set and invokes deterministic text generation only when numerical sizing is required.
+- A controlled comparison of six open LLMs under few-shot prompting.
+- Stage-specific supervised fine-tuning of Qwen3-14B for preflop and postflop decisions.
+- Separate evaluation of categorical action prediction and numerical sizing.
+- Diagnostic analyses across action classes, positions, postflop streets, prompt formulations, decoding settings, and training-data fractions.
 
-The source workflows and benchmark framing build on the PokerBench-style evaluation setting used in the dissertation. This release does not bundle the full training or evaluation corpora, and it is not a complete reproduction bundle. Users should obtain compatible datasets and model artifacts separately if they wish to reproduce the original experiments.
+## Key Results
 
-Suggested citation:
-- Diniz, L. O. (2026). Learning Strategic Poker Decision-Making with Large Language Models. Master's dissertation project.
+Supervised fine-tuning increased Action Accuracy from:
 
-## Repository structure
+- **76.0% to 95.7% preflop**
+- **51.5% to 91.8% postflop**
 
-- configs/: example configuration stubs
-- prompts/: prompt templates and notes
-- code/analysis/: analysis scripts
-- code/evaluation/: evaluator scripts
-- code/training/: training scripts
-- data/samples/: small, illustrative examples only
-- results/summaries/: lightweight notes and summaries
-- docs/: documentation notes
-- manifests/: export and exclusion manifests
+The results show that open LLMs can achieve high agreement with benchmark reference actions after supervised adaptation, while precise numerical sizing remains more difficult and sensitive to prompt formulation.
 
-## Environment setup
+## Relationship to PokerBench
 
-Create a virtual environment and install the dependencies listed in requirements.txt:
+This work builds on the textual poker-state formulation and datasets introduced by **PokerBench**:
+
+- GitHub: https://github.com/pokerllm/pokerbench
+- Paper: https://doi.org/10.1609/aaai.v39i24.34814
+
+PokerBench provides textualized preflop and postflop decision states with reference outputs. The dissertation extends this experimental setting through a controlled few-shot comparison, stage-specific supervised adaptation, a hybrid action-and-sizing evaluation pipeline, and more granular error, contextual, and robustness analyses.
+
+## Research Outputs
+
+This research developed through the following outputs:
+
+- **ENIAC 2025** — *Evaluation of LLMs for Effective Recommendation of Poker Strategies* — https://doi.org/10.5753/eniac.2025.12461
+- **BRACIS 2026** — *Supervised Fine-Tuning of Large Language Models for Strategic Decision-Making in Poker* — accepted for presentation and publication.
+- **IEEE Transactions on Games** — *PokerLLM: Learning Strategic Poker Play with Large Language Models* — manuscript based on the complete experimental framework.
+
+## Academic Context
+
+This repository accompanies the MSc dissertation developed at the Federal University of Uberlândia under the supervision of Prof. Dr. Murillo Guimarães Carneiro.
+
+The project focuses on isolated decision prediction rather than complete poker play, online re-solving, exploitability evaluation, or opponent-adaptive strategy.
+
+## Repository Contents
+
+- `code/evaluation/hybrid_evaluator.py`  
+  Hybrid action and sizing evaluation pipeline.
+
+- `code/training/train_preflop.py`  
+  Preflop supervised fine-tuning script.
+
+- `code/training/train_postflop.py`  
+  Postflop supervised fine-tuning script.
+
+Users should obtain the compatible PokerBench data and model checkpoints separately.
+
+The original PokerBench datasets, trained adapters, model weights, and large prediction files are not redistributed in this repository.
+
+## Usage
+
+Inspect the available arguments with:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+python code/evaluation/hybrid_evaluator.py --help
+python code/training/train_preflop.py --help
+python code/training/train_postflop.py --help
 ```
-
-## Evaluation instructions
-
-Run the evaluator from the repository root:
-
-```bash
-python code/evaluation/avaliar_exactmatch_hybrid_metricsfix_allpreds.py --dataset data/samples/preflop_example.json --output_file outputs/eval.json
-```
-
-This example uses the included lightweight sample dataset and writes a placeholder evaluation output under the outputs directory.
-
-## Fine-tuning instructions
-
-The training scripts in code/training/ are included for reference. They preserve the original workflow structure and training configuration intent, but the release does not include the original training data or trained adapters.
-
-## Metrics explained
-
-- Action Accuracy (AA): the fraction of predictions whose action matches the reference.
-- Action-and-Sizing Accuracy (Acc-s): full credit when the action is correct and the sizing is within tolerance, partial credit when the action is an aggressive action and the sizing is outside tolerance, and zero when the action is incorrect.
-
-## Reproduction limitations
-
-This release is intentionally conservative. It does not distribute:
-- trained model weights;
-- adapter checkpoints;
-- full training or test datasets;
-- optimizer state;
-- large raw prediction dumps; or
-- local runtime caches.
-
-Full reproducibility of the original dissertation results requires access to the original PokerBench data and model artifacts that are not included here.
-
-## Citation instructions
-
-Please cite this repository and the dissertation work together. See CITATION.cff for metadata.
