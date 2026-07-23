@@ -1,6 +1,6 @@
 # PokerLLM Public Release
 
-This repository packages a lightweight, public-facing subset of the PokerLLM dissertation workflow for inspection and reuse. It is derived from the canonical dissertation workspace and the frozen experiment workspace, but it intentionally excludes trained model weights, full datasets, checkpoints, optimizer state, and large raw prediction dumps.
+This repository packages a lightweight, public-facing subset of the PokerLLM dissertation workflow for inspection and documentation. It is derived from the canonical dissertation workspace and the frozen experiment workspace, but it intentionally excludes trained model weights, full datasets, checkpoints, optimizer state, and large raw prediction dumps.
 
 ## Dissertation context
 
@@ -9,10 +9,10 @@ This work studies whether large language models can learn strategic poker decisi
 ## Research objective
 
 The goal of the release is to provide:
-- portable analysis and evaluation scripts;
-- summary figures and tables;
-- ablation and robustness notes; and
-- a minimal sample dataset for quick inspection.
+- analysis, evaluation, and training-reference scripts;
+- methodological documentation;
+- lightweight robustness and ablation notes; and
+- one illustrative sample record for quick inspection.
 
 ## Dataset source and citation
 
@@ -29,9 +29,7 @@ Suggested citation:
 - code/evaluation/: evaluator scripts
 - code/training/: training scripts
 - data/samples/: small, illustrative examples only
-- results/summaries/: summary reports and tables
-- results/tables/: summary tables
-- results/figures/: final figures
+- results/summaries/: lightweight notes and summaries
 - docs/: documentation notes
 - manifests/: export and exclusion manifests
 
@@ -61,8 +59,8 @@ The training scripts in code/training/ are included for reference. They preserve
 
 ## Metrics explained
 
-- Action Accuracy (AA): the fraction of examples where the predicted action matches the gold action.
-- Action-and-Sizing Accuracy (Acc-s): the fraction of examples where the action and the size are both correct within the evaluation tolerance.
+- Action Accuracy (AA): the fraction of predictions whose action matches the reference.
+- Action-and-Sizing Accuracy (Acc-s): full credit when the action is correct and the sizing is within tolerance, partial credit when the action is an aggressive action and the sizing is outside tolerance, and zero when the action is incorrect.
 
 ## Reproduction limitations
 
