@@ -15,8 +15,9 @@ Each decision is scored in two stages:
 1. **Action.** The action (fold / call / check / bet / raise) is selected by
    comparing the next-token log-probability of each available action -- no
    text is generated for this step.
-2. **Sizing.** Only when the selected action is aggressive (bet/raise) is a
-   short deterministic generation used to produce the numeric size.
+2. **Sizing.** A short deterministic generation is invoked whenever the
+   selected or reference action is aggressive, allowing sizing information
+   to be retained for evaluation and diagnostics.
 
 `evaluation/hybrid_evaluator.py` owns parsing, prompting, model loading, and
 I/O for this pipeline. `evaluation/metrics.py` owns only the scoring math

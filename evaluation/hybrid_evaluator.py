@@ -29,7 +29,9 @@ Usage:
 """
 import argparse
 import csv
+import hashlib
 import json
+import os
 import random
 import re
 import sys
@@ -240,6 +242,84 @@ def load_model(model_name: str, mode: str, adapter_path: Optional[str]):
 
 
 # ============================================================================
+# Resumable, deduplicated CSV output
+# ============================================================================
+
+def make_sample_id(instruction: str, gold_label: str) -> str:
+    """Stable identifier for one (instruction, gold label) pair: SHA-256 of the
+    stripped instruction and the normalized gold label. Used to detect rows a
+    previous run already completed, so a rerun can resume without
+    duplicating them."""
+    payload = (instruction.strip() + "\x1f" + gold_label.strip().lower()).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def load_existing_sample_ids(predictions_csv_path: str) -> set:
+    """Reads sample_id values already present in an existing predictions CSV.
+    Returns an empty set if the file does not exist yet."""
+    ids = set()
+    if not os.path.isfile(predictions_csv_path):
+        return ids
+    with open(predictions_csv_path, newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            sid = row.get("sample_id")
+            if sid:
+                ids.add(sid)
+    return ids
+
+
+class IncrementalCsvWriter:
+    """Writes predictions.csv one row at a time, flushing and fsyncing after
+    each row. If the file already has content, new rows are appended instead
+    of overwriting it -- combined with make_sample_id / load_existing_sample_ids,
+    this is what makes an interrupted run resumable without duplicate rows.
+    The header is written only when the file is created, never on append."""
+
+    def __init__(self, path: str, fieldnames: List[str]):
+        file_exists = os.path.isfile(path) and os.path.getsize(path) > 0
+        self._fh = open(path, "a" if file_exists else "w", newline="", encoding="utf-8")
+        self._writer = csv.DictWriter(self._fh, fieldnames=fieldnames)
+        if not file_exists:
+            self._writer.writeheader()
+            self._fh.flush()
+
+    def write_row(self, row: dict) -> None:
+        self._writer.writerow(row)
+        self._fh.flush()
+        os.fsync(self._fh.fileno())
+
+    def close(self) -> None:
+        self._fh.close()
+
+
+def _parse_optional_float(value: Optional[str]) -> Optional[float]:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
+def read_predictions_csv(path: str) -> List["metrics.SampleResult"]:
+    """Reads this evaluator's own predictions CSV back into SampleResult
+    objects, so aggregate metrics are computed over the complete file --
+    including rows written by an earlier, interrupted run -- rather than
+    only the rows produced in the current pass."""
+    samples = []
+    with open(path, newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            gold_action = row["gold_action"]
+            samples.append(metrics.SampleResult(
+                action_correct=row["action_correct"] == "1",
+                gold_is_aggressive=gold_action in AGGRESSIVE_ACTIONS,
+                gold_size=_parse_optional_float(row.get("gold_size")),
+                pred_size=_parse_optional_float(row.get("pred_size")),
+            ))
+    return samples
+
+
+# ============================================================================
 # Main
 # ============================================================================
 
@@ -250,6 +330,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--adapter", default=None, help="Path to a LoRA adapter (required for --mode lora)")
     p.add_argument("--dataset", required=True, help="Path to a JSON list of {instruction, output}")
     p.add_argument("--train-dataset", default=None, help="Training set to sample few-shot examples from (--mode fewshot)")
+    p.add_argument("--stage", choices=["preflop", "postflop"], default=None,
+                   help="Overrides stage inference from the dataset filename.")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--max-samples", type=int, default=None)
     p.add_argument("--max-new-tokens-sizing", type=int, default=10)
@@ -267,7 +349,13 @@ def main():
     if args.max_samples:
         data = data[: args.max_samples]
 
-    stage = "postflop" if "postflop" in args.dataset.lower() else "preflop"
+    if args.stage:
+        stage = args.stage
+    else:
+        stage = "postflop" if "postflop" in args.dataset.lower() else "preflop"
+        print(f"[warn] --stage not given -- inferring stage='{stage}' from the dataset "
+              f"filename ({args.dataset}). Pass --stage explicitly to avoid relying on this.",
+              file=sys.stderr)
     base_actions = BASE_ACTIONS_POSTFLOP if stage == "postflop" else BASE_ACTIONS_PREFLOP
 
     fewshot_examples = []
@@ -280,52 +368,62 @@ def main():
 
     model, tokenizer = load_model(args.model, args.mode, args.adapter)
 
-    fieldnames = ["sample_idx", "position", "street", "gold_action", "gold_size",
+    fieldnames = ["sample_idx", "sample_id", "position", "street", "gold_action", "gold_size",
                   "pred_action", "pred_size", "action_correct", "ac_s_i"]
-    rows_for_summary = []
 
-    with open(args.predictions_csv, "w", newline="", encoding="utf-8") as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writeheader()
+    existing_ids = load_existing_sample_ids(args.predictions_csv)
+    if existing_ids:
+        print(f"[resume] {len(existing_ids)} samples already present in {args.predictions_csv} "
+              "-- skipping those.")
+    writer = IncrementalCsvWriter(args.predictions_csv, fieldnames)
 
-        for i, item in enumerate(data):
-            instruction = item["instruction"]
-            gold_action, gold_size = parse_label(item["output"])
-            position = extract_position_from_instruction(instruction)
-            street = extract_street_from_instruction(instruction)
+    n_processed_this_run = 0
+    for i, item in enumerate(data):
+        instruction = item["instruction"]
+        sample_id = make_sample_id(instruction, item["output"])
+        if sample_id in existing_ids:
+            continue
 
-            available_actions = (infer_available_actions(instruction, base_actions)
-                                  if stage == "postflop" else base_actions)
+        gold_action, gold_size = parse_label(item["output"])
+        position = extract_position_from_instruction(instruction)
+        street = extract_street_from_instruction(instruction)
 
-            if args.mode == "lora":
-                prompt = build_prompt_for_logprob(instruction)
-            else:
-                prompt = build_prompt_fewshot_logprob(instruction, fewshot_examples)
-            pred_action = get_best_action_logprob(prompt, model, tokenizer, available_actions)
+        available_actions = (infer_available_actions(instruction, base_actions)
+                              if stage == "postflop" else base_actions)
 
-            pred_size = None
-            if gold_action in AGGRESSIVE_ACTIONS or pred_action in AGGRESSIVE_ACTIONS:
-                sizing_prompt = (build_prompt_for_sizing(instruction, pred_action) if args.mode == "lora"
-                                  else build_prompt_fewshot_sizing(instruction, pred_action, fewshot_examples))
-                generated = generate_size(sizing_prompt, model, tokenizer, args.max_new_tokens_sizing)
-                pred_size = parse_sizing_value(generated)
+        if args.mode == "lora":
+            prompt = build_prompt_for_logprob(instruction)
+        else:
+            prompt = build_prompt_fewshot_logprob(instruction, fewshot_examples)
+        pred_action = get_best_action_logprob(prompt, model, tokenizer, available_actions)
 
-            action_correct = pred_action == gold_action
-            gold_is_aggressive = gold_action in AGGRESSIVE_ACTIONS
-            ac_s_i = metrics.compute_continuous_acs(action_correct, gold_is_aggressive, gold_size, pred_size)
+        pred_size = None
+        if gold_action in AGGRESSIVE_ACTIONS or pred_action in AGGRESSIVE_ACTIONS:
+            sizing_prompt = (build_prompt_for_sizing(instruction, pred_action) if args.mode == "lora"
+                              else build_prompt_fewshot_sizing(instruction, pred_action, fewshot_examples))
+            generated = generate_size(sizing_prompt, model, tokenizer, args.max_new_tokens_sizing)
+            pred_size = parse_sizing_value(generated)
 
-            writer.writerow({
-                "sample_idx": i, "position": position, "street": street,
-                "gold_action": gold_action, "gold_size": gold_size,
-                "pred_action": pred_action, "pred_size": pred_size,
-                "action_correct": int(action_correct), "ac_s_i": round(ac_s_i, 6),
-            })
-            rows_for_summary.append(metrics.SampleResult(action_correct, gold_is_aggressive, gold_size, pred_size))
+        action_correct = pred_action == gold_action
+        gold_is_aggressive = gold_action in AGGRESSIVE_ACTIONS
+        ac_s_i = metrics.compute_continuous_acs(action_correct, gold_is_aggressive, gold_size, pred_size)
 
-            if (i + 1) % 100 == 0:
-                print(f"  {i + 1}/{len(data)} processed", flush=True)
+        writer.write_row({
+            "sample_idx": i, "sample_id": sample_id, "position": position, "street": street,
+            "gold_action": gold_action, "gold_size": gold_size,
+            "pred_action": pred_action, "pred_size": pred_size,
+            "action_correct": int(action_correct), "ac_s_i": round(ac_s_i, 6),
+        })
+        existing_ids.add(sample_id)
+        n_processed_this_run += 1
 
-    summary = metrics.summarize(rows_for_summary)
+        if (i + 1) % 100 == 0:
+            print(f"  {i + 1}/{len(data)} processed", flush=True)
+
+    writer.close()
+    print(f"{n_processed_this_run} new predictions written this run.")
+
+    summary = metrics.summarize(read_predictions_csv(args.predictions_csv))
     summary["stage"] = stage
     summary["mode"] = args.mode
     summary["model"] = args.model
