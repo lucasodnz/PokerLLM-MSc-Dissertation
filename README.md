@@ -6,44 +6,95 @@ preflop and postflop decisions. Categorical action prediction and numerical
 bet/raise sizing are reported both separately and through a continuous joint
 score.
 
-## Repository contents
+See `CITATION.cff` for citation information.
 
-```
-training/
-  train_preflop.py      Preflop supervised fine-tuning (Qwen3-14B, QLoRA, response-only loss;
-                         action and sizing jointly supervised)
-  train_postflop.py      Postflop supervised fine-tuning (Qwen3-14B, QLoRA)
-evaluation/
-  hybrid_evaluator.py    Action via log-probability + sizing via deterministic generation
-  metrics.py             Dataset-agnostic scoring functions (no PokerBench/Transformers dependency)
-examples/
-  preflop.json           Two illustrative (synthetic) preflop examples
-  postflop.json          Two illustrative (synthetic) postflop examples
-```
+## Hybrid evaluation pipeline
 
-Model adapters, PokerBench datasets, and prediction files are not redistributed here.
+Each decision is scored in two stages:
 
-## Continuous action-and-sizing score (Ac-s)
+1. **Action.** The action (fold / call / check / bet / raise) is selected by
+   comparing the next-token log-probability of each available action -- no
+   text is generated for this step.
+2. **Sizing.** Only when the selected action is aggressive (bet/raise) is a
+   short deterministic generation used to produce the numeric size.
 
-For each sample, the continuous Ac-s is:
+`evaluation/hybrid_evaluator.py` owns parsing, prompting, model loading, and
+I/O for this pipeline. `evaluation/metrics.py` owns only the scoring math
+below and has no dependency on this pipeline, PokerBench, or
+Transformers/torch -- it operates on already-parsed action/size pairs.
 
-- `0` if the predicted action is wrong
-- `1` if the action is correct and the reference action is not aggressive (not bet/raise)
-- `exp(-|log(pred_size / gold_size)|)` if the action is correct, aggressive, and both sizes are valid
-- `0` if the action is correct and aggressive but the predicted size is invalid
+## Continuous Action–Sizing accuracy (Ac-s)
 
-A size is valid when it is a finite number, greater than 0, and at most 100. The **conditional
-sizing score** is the mean of the third case above, computed only over samples where the action is
-correct, aggressive, and both sizes are valid (it is not defined, rather than zero, when there are no
-such samples). This scoring logic (`evaluation/metrics.py`) is dataset-agnostic: it operates on
-already-parsed action/size pairs and has no dependency on PokerBench or on Transformers/torch.
+**Sizing similarity.** For a gold size $s > 0$ and a predicted size $\hat{s} > 0$:
 
-## Relationship to PokerBench
+$$\mathrm{sim}(s, \hat{s}) = \exp\left(-\left|\log(\hat{s} / s)\right|\right)$$
 
-The textual poker-state formulation and reference decisions used to produce the results below come from
-**PokerBench** (https://github.com/pokerllm/pokerbench, https://doi.org/10.1609/aaai.v39i24.34814).
-PokerBench is the source of the experimental data, not a code dependency: `metrics.py` does not import or
-require any PokerBench code.
+This equals 1 for an exact match and decays smoothly and symmetrically as the
+predicted size diverges from the gold size in either direction (in log space).
+
+**Per-sample Ac-s.** For sample $i$ with gold action $a_i$ and predicted action $\hat{a}_i$:
+
+$$
+\mathrm{Ac\text{-}s}_i =
+\begin{cases}
+0 & \hat{a}_i \neq a_i \\
+1 & \hat{a}_i = a_i \text{ and } a_i \notin \{\mathrm{bet}, \mathrm{raise}\} \\
+\mathrm{sim}(s_i, \hat{s}_i) & \hat{a}_i = a_i,\ a_i \in \{\mathrm{bet}, \mathrm{raise}\},\ \text{and } s_i, \hat{s}_i \text{ both valid} \\
+0 & \hat{a}_i = a_i,\ a_i \in \{\mathrm{bet}, \mathrm{raise}\},\ \text{but } \hat{s}_i \text{ invalid}
+\end{cases}
+$$
+
+**Global Ac-s.** The mean over all $N$ samples in the evaluation set:
+
+$$\mathrm{Ac\text{-}s} = \frac{1}{N}\sum_{i=1}^{N} \mathrm{Ac\text{-}s}_i$$
+
+**Valid sizing.** A size is valid when it is a finite number, greater than 0,
+and at most 100 (this dataset expresses sizes as a chip count normalized to
+the big blind). An invalid or missing predicted size is never silently
+treated as an exact match or as zero error -- it always scores 0 in Ac-s.
+
+**Conditional sizing score.** The mean sizing similarity restricted to the
+eligible subset $E = \{i : \hat{a}_i = a_i,\ a_i \text{ aggressive},\ s_i \text{ and } \hat{s}_i \text{ both valid}\}$:
+
+$$\mathrm{Conditional\ Sizing\ Score} = \frac{1}{|E|}\sum_{i \in E} \mathrm{sim}(s_i, \hat{s}_i)$$
+
+It is undefined (not zero) when $E$ is empty, and isolates numerical sizing
+quality from action-classification errors.
+
+## Results
+
+Supervised fine-tuning brings substantial gains over few-shot prompting in
+both preflop and postflop decision-making, with the corrected preflop trainer
+(`training/train_preflop.py`) jointly supervising the action and the numeric
+sizing under a response-only loss. The hybrid evaluator
+(`evaluation/hybrid_evaluator.py`) treats action selection and sizing
+generation as separate steps and then combines them through the continuous
+Action–Sizing accuracy (Ac-s) defined above.
+
+Detailed results, statistical significance tests, robustness checks, and
+ablation studies are reported in the dissertation and the associated papers
+(see Research outputs below).
+
+## Research outputs
+
+Related research outputs include:
+
+- **ENIAC 2025** -- *Evaluation of LLMs for Effective Recommendation of Poker
+  Strategies* -- [DOI](https://doi.org/10.5753/eniac.2025.12461) -- published.
+- **BRACIS 2026** -- *Supervised Fine-Tuning of Large Language Models for
+  Strategic Decision-Making in Poker* -- accepted for presentation and
+  publication.
+- An associated MSc dissertation, *Learning Strategic Poker Decision-Making
+  with Large Language Models*.
+
+## Data
+
+PokerBench ([repository](https://github.com/pokerllm/pokerbench),
+[DOI](https://doi.org/10.1609/aaai.v39i24.34814)) supplies the textual
+poker-state formulation and reference decisions used to produce the results
+above, as the source of the experimental data rather than a code dependency.
+Model adapters, PokerBench datasets, and prediction files are not
+redistributed in this repository.
 
 ## Usage
 
@@ -66,16 +117,3 @@ python training/train_preflop.py --dataset-path /path/to/preflop_train.json --ou
 # Postflop training
 python training/train_postflop.py --train-path /path/to/postflop_train.json --test-path /path/to/postflop_test.json --output-dir out/postflop
 ```
-
-## Results
-
-| Stage | Setting | Ac | Continuous Ac-s | Conditional sizing score |
-|---|---|---|---|---|
-| Preflop | Few-shot | 76.1% | 71.4% | — |
-| Preflop | Fine-tuned | 93.3% | 93.2% | 99.4% |
-| Postflop | Few-shot | 51.5% | 50.3% | — |
-| Postflop | Fine-tuned | 91.8% | 85.3% | 70.0% |
-
-## Citation
-
-See `CITATION.cff`.
