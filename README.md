@@ -1,74 +1,81 @@
-# PokerLLM — MSc Dissertation Research
+# PokerLLM
 
-Code accompanying the MSc dissertation:
+Supervised fine-tuning and hybrid evaluation of open large language models on
+textual poker decision states (6-max No-Limit Texas Hold'em), covering both
+preflop and postflop decisions. Categorical action prediction and numerical
+bet/raise sizing are reported both separately and through a continuous joint
+score.
 
-**Learning Strategic Poker Decision-Making with Large Language Models**
+## Repository contents
 
-This project investigates open large language models as predictors of strategic decisions in 6-max No-Limit Texas Hold'em. It compares few-shot prompting with supervised fine-tuning and evaluates categorical action prediction separately from numerical bet and raise sizing.
+```
+training/
+  train_preflop.py      Preflop supervised fine-tuning (Qwen3-14B, QLoRA, response-only loss;
+                         action and sizing jointly supervised)
+  train_postflop.py      Postflop supervised fine-tuning (Qwen3-14B, QLoRA)
+evaluation/
+  hybrid_evaluator.py    Action via log-probability + sizing via deterministic generation
+  metrics.py             Dataset-agnostic scoring functions (no PokerBench/Transformers dependency)
+examples/
+  preflop.json           Two illustrative (synthetic) preflop examples
+  postflop.json          Two illustrative (synthetic) postflop examples
+```
 
-This repository presents one focused MSc research project within a broader research agenda on poker, imperfect-information games, and large language models.
+Model adapters, PokerBench datasets, and prediction files are not redistributed here.
 
-## Main Contributions
+## Continuous action-and-sizing score (Ac-s)
 
-- A hybrid evaluation pipeline that selects actions using log-probabilities over the legal action set and invokes deterministic text generation only when numerical sizing is required.
-- A controlled comparison of six open LLMs under few-shot prompting.
-- Stage-specific supervised fine-tuning of Qwen3-14B for preflop and postflop decisions.
-- Separate evaluation of categorical action prediction and numerical sizing.
-- Diagnostic analyses across action classes, positions, postflop streets, prompt formulations, decoding settings, and training-data fractions.
+For each sample, the continuous Ac-s is:
 
-## Key Results
+- `0` if the predicted action is wrong
+- `1` if the action is correct and the reference action is not aggressive (not bet/raise)
+- `exp(-|log(pred_size / gold_size)|)` if the action is correct, aggressive, and both sizes are valid
+- `0` if the action is correct and aggressive but the predicted size is invalid
 
-Supervised fine-tuning increased Action Accuracy from:
-
-- **76.0% to 95.7% preflop**
-- **51.5% to 91.8% postflop**
-
-The results show that open LLMs can achieve high agreement with benchmark reference actions after supervised adaptation, while precise numerical sizing remains more difficult and sensitive to prompt formulation.
+A size is valid when it is a finite number, greater than 0, and at most 100. The **conditional
+sizing score** is the mean of the third case above, computed only over samples where the action is
+correct, aggressive, and both sizes are valid (it is not defined, rather than zero, when there are no
+such samples). This scoring logic (`evaluation/metrics.py`) is dataset-agnostic: it operates on
+already-parsed action/size pairs and has no dependency on PokerBench or on Transformers/torch.
 
 ## Relationship to PokerBench
 
-This work builds on the textual poker-state formulation and datasets introduced by **PokerBench**:
-
-- GitHub: https://github.com/pokerllm/pokerbench
-- Paper: https://doi.org/10.1609/aaai.v39i24.34814
-
-PokerBench provides textualized preflop and postflop decision states with reference outputs. The dissertation extends this experimental setting through a controlled few-shot comparison, stage-specific supervised adaptation, a hybrid action-and-sizing evaluation pipeline, and more granular error, contextual, and robustness analyses.
-
-## Research Outputs
-
-This research developed through the following outputs:
-
-- **ENIAC 2025** — *Evaluation of LLMs for Effective Recommendation of Poker Strategies* — https://doi.org/10.5753/eniac.2025.12461
-- **BRACIS 2026** — *Supervised Fine-Tuning of Large Language Models for Strategic Decision-Making in Poker* — accepted for presentation and publication.
-- **IEEE Transactions on Games** — *PokerLLM: Learning Strategic Poker Play with Large Language Models* — manuscript based on the complete experimental framework.
-
-## Academic Context
-
-This repository accompanies the MSc dissertation developed at the Federal University of Uberlândia under the supervision of Prof. Dr. Murillo Guimarães Carneiro.
-
-The project focuses on isolated decision prediction rather than complete poker play, online re-solving, exploitability evaluation, or opponent-adaptive strategy.
-
-## Repository Contents
-
-- `code/evaluation/hybrid_evaluator.py`  
-  Hybrid action and sizing evaluation pipeline.
-
-- `code/training/train_preflop.py`  
-  Preflop supervised fine-tuning script.
-
-- `code/training/train_postflop.py`  
-  Postflop supervised fine-tuning script.
-
-Users should obtain the compatible PokerBench data and model checkpoints separately.
-
-The original PokerBench datasets, trained adapters, model weights, and large prediction files are not redistributed in this repository.
+The textual poker-state formulation and reference decisions used to produce the results below come from
+**PokerBench** (https://github.com/pokerllm/pokerbench, https://doi.org/10.1609/aaai.v39i24.34814).
+PokerBench is the source of the experimental data, not a code dependency: `metrics.py` does not import or
+require any PokerBench code.
 
 ## Usage
 
-Inspect the available arguments with:
-
 ```bash
-python code/evaluation/hybrid_evaluator.py --help
-python code/training/train_preflop.py --help
-python code/training/train_postflop.py --help
+# Fine-tuned adapter, hybrid evaluation
+python evaluation/hybrid_evaluator.py \
+    --mode lora --adapter /path/to/adapter \
+    --dataset examples/preflop.json \
+    --predictions-csv preds.csv --metrics-json metrics.json
+
+# Few-shot baseline (base model, no adapter)
+python evaluation/hybrid_evaluator.py \
+    --mode fewshot --train-dataset /path/to/train.json \
+    --dataset examples/postflop.json \
+    --predictions-csv preds.csv --metrics-json metrics.json
+
+# Preflop training
+python training/train_preflop.py --dataset-path /path/to/preflop_train.json --output-dir out/preflop
+
+# Postflop training
+python training/train_postflop.py --train-path /path/to/postflop_train.json --test-path /path/to/postflop_test.json --output-dir out/postflop
 ```
+
+## Results
+
+| Stage | Setting | Ac | Continuous Ac-s | Conditional sizing score |
+|---|---|---|---|---|
+| Preflop | Few-shot | 76.1% | 71.4% | — |
+| Preflop | Fine-tuned | 93.3% | 93.2% | 99.4% |
+| Postflop | Few-shot | 51.5% | 50.3% | — |
+| Postflop | Fine-tuned | 91.8% | 85.3% | 70.0% |
+
+## Citation
+
+See `CITATION.cff`.

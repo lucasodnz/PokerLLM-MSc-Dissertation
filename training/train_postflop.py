@@ -1,3 +1,16 @@
+"""
+train_postflop.py
+
+Supervised fine-tuning of Qwen3-14B (QLoRA, 4-bit NF4) for postflop poker
+decisions. This is the canonical postflop training script used for the
+dissertation's postflop results (91.8% Action Accuracy) -- its logic and
+hyperparameters are unchanged from that run; only the dataset/output paths
+have been converted from hardcoded values to CLI arguments.
+
+Usage:
+  python train_postflop.py --train-path train.json --test-path test.json --output-dir out/
+"""
+import argparse
 import torch
 import json
 import random
@@ -31,12 +44,12 @@ import sys
 class TrainingConfig:
     # Modelo
     model_name: str = "Qwen/Qwen3-14B"
-    
-    # Dados
-    train_path: str = "/home/lucasdiniz/llm_workspace/datasets/postflop_500k_train_set_prompt_and_label.json"
-    test_path: str = "/home/lucasdiniz/llm_workspace/datasets/postflop_10k_test_set_prompt_and_label.json"
-    output_dir: str = "/home/lucasdiniz/llm_workspace/ft_optimized_memory"
-    
+
+    # Dados (paths fornecidos via CLI -- ver parse_cli_args())
+    train_path: str = ""
+    test_path: str = ""
+    output_dir: str = ""
+
     # Treino (OTIMIZADO E SEGURO para RTX 5090 32GB)
     max_train_samples: int = 0  # 0 = usar todos (500k)
     max_eval_samples: int = 5000  # Mais amostras para avaliação robusta
@@ -306,7 +319,7 @@ def train_model(config: TrainingConfig):
         tokenizer.save_pretrained(config.output_dir)
         
         # Salvar config
-        config_dict = config._dict_
+        config_dict = config.__dict__
         with open(os.path.join(config.output_dir, "config.json"), "w") as f:
             json.dump(config_dict, f, indent=2)
         
@@ -321,7 +334,7 @@ def train_model(config: TrainingConfig):
 class SimplePokerEvaluator:
     """Avaliador simplificado para menos memória"""
     
-    def _init_(self, model, tokenizer):
+    def __init__(self, model, tokenizer):
         self.model = model
         self.tokenizer = tokenizer
         self.model.eval()
@@ -385,32 +398,45 @@ class SimplePokerEvaluator:
         print(f"✅ Acurácia rápida: {accuracy:.4f} ({accuracy*100:.1f}%)")
         return accuracy
 
+def parse_cli_args():
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--train-path", required=True, help="Postflop training set JSON ({instruction, output} list)")
+    p.add_argument("--test-path", required=True, help="Postflop held-out evaluation set JSON")
+    p.add_argument("--output-dir", required=True, help="Adapter output directory")
+    p.add_argument("--max-train-samples", type=int, default=0, help="0 = use all training examples")
+    p.add_argument("--max-eval-samples", type=int, default=5000)
+    p.add_argument("--num-train-epochs", type=float, default=3.0)
+    return p.parse_args()
+
+
 def main():
     """Pipeline principal com otimizações de memória"""
-    
+    cli_args = parse_cli_args()
+
     # Configurar handlers de sinal
     setup_signal_handlers()
-    
+
     # Configurar variáveis de ambiente
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    
+
     # Verificar espaço em disco
     disk = psutil.disk_usage('/')
     print(f"💾 Espaço em disco: {disk.free / 1024**3:.1f}GB livre / {disk.total / 1024**3:.1f}GB total")
     if disk.free / 1024**3 < 50:
         print("⚠️  AVISO: Menos de 50GB livres - checkpoints podem falhar!")
-    
+
     print("=" * 60)
     print("🎯 FINE-TUNING OTIMIZADO PARA MEMÓRIA")
     print("=" * 60)
-    
-    # Config - TREINAMENTO COMPLETO (RTX 5090 32GB)
+
     config = TrainingConfig(
-        max_train_samples=0,  # 0 = TODOS os 500k
-        max_eval_samples=5000,  # Avaliação robusta
-        num_train_epochs=3.0,  # 3 épocas completas
-        output_dir="/home/lucasdiniz/llm_workspace/ft_qwen14b_full_500k"
+        train_path=cli_args.train_path,
+        test_path=cli_args.test_path,
+        output_dir=cli_args.output_dir,
+        max_train_samples=cli_args.max_train_samples,
+        max_eval_samples=cli_args.max_eval_samples,
+        num_train_epochs=cli_args.num_train_epochs,
     )
     
     # 1. Treinar
@@ -434,7 +460,7 @@ def main():
     # 3. Salvar resultados
     results = {
         "accuracy": accuracy,
-        "config": config._dict_,
+        "config": config.__dict__,
         "samples_evaluated": 500
     }
     

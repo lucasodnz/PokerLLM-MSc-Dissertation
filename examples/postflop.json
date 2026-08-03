@@ -1,0 +1,10 @@
+[
+  {
+    "instruction": "You are a specialist in playing 6-handed No Limit Texas Hold'em. The following will be a game scenario and you need to make the optimal decision.\n\nHere is a game summary:\n\nThe small blind is 0.5 chips and the big blind is 1 chips. Everyone started with 100 chips.\nThe player positions involved in this game are UTG, HJ, CO, BTN, SB, BB.\nIn this hand, your position is CO, and your holding is [King of Heart and King of Club].\nBefore the flop, CO raise 2.5 chips, and BB call.\nThe flop comes King Of Spade, Seven Of Diamond, and Two Of Club, then BB check.\n\nNow it is your turn to make a move.\nTo remind you, the current pot size is 6.0 chips, and your holding is [King of Heart and King of Club].\n\nDecide on an action based on the strength of your hand on this board, your position, and actions before you. Do not explain your answer.\nYour optimal action is:",
+    "output": "bet 4.0"
+  },
+  {
+    "instruction": "You are a specialist in playing 6-handed No Limit Texas Hold'em. The following will be a game scenario and you need to make the optimal decision.\n\nHere is a game summary:\n\nThe small blind is 0.5 chips and the big blind is 1 chips. Everyone started with 100 chips.\nThe player positions involved in this game are UTG, HJ, CO, BTN, SB, BB.\nIn this hand, your position is BB, and your holding is [Four of Spade and Nine of Heart].\nBefore the flop, BTN raise 2.0 chips, and BB call.\nThe flop comes Ace Of Diamond, Jack Of Club, and Six Of Spade, then BB check, and BTN bet 3 chips.\n\nNow it is your turn to make a move.\nTo remind you, the current pot size is 8.0 chips, and your holding is [Four of Spade and Nine of Heart].\n\nDecide on an action based on the strength of your hand on this board, your position, and actions before you. Do not explain your answer.\nYour optimal action is:",
+    "output": "fold"
+  }
+]
