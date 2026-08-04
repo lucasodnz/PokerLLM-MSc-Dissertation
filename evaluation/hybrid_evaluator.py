@@ -11,8 +11,10 @@ causal language models on textual poker decision states:
   2. Only when the selected or reference action is aggressive (bet/raise) is
      a short deterministic generation used to produce the numeric size.
   3. Predictions are scored with the dataset-agnostic functions in
-     metrics.py: continuous action-and-sizing score (Ac-s), conditional
-     sizing score, exact match, and BB tolerance bands.
+     metrics.py. The headline, reported metrics are the continuous
+     action-and-sizing score (Ac-s) and the conditional sizing score;
+     exact-match rate and BB-tolerance bands are additional, non-headline
+     diagnostics retained for internal analysis only.
 
 This file owns parsing, prompting, model loading, and I/O. metrics.py owns
 only the scoring math and has no dependency on this file, PokerBench, or

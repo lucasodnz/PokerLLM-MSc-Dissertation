@@ -90,13 +90,15 @@ class SampleResult:
 def summarize(samples: Sequence[SampleResult]) -> dict:
     """Aggregates a sequence of SampleResult into the summary metrics used
     throughout this project:
+      Headline metrics (used in reported results):
       - accuracy_action: fraction of samples with the correct action
       - acs_continuous_mean: mean per-sample continuous Ac-s (denominator = all samples)
-      - exact_match_rate: fraction of samples where the action is correct AND,
-        for aggressive samples, the predicted size exactly equals the gold size
       - conditional_sizing_score: mean relative sizing score over ELIGIBLE
         samples only (action correct, aggressive, both sizes valid) -- and its
         count
+      Supplementary, non-headline diagnostics (not part of the reported results):
+      - exact_match_rate: fraction of samples where the action is correct AND,
+        for aggressive samples, the predicted size exactly equals the gold size
       - within_0_5bb / within_1bb / within_2bb: fraction of eligible samples
         whose absolute sizing error is within each tolerance
     """

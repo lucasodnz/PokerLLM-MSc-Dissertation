@@ -1,39 +1,63 @@
-# PokerLLM
+# PokerLLM: Learning Strategic Poker Decision-Making with Large Language Models
 
-Supervised fine-tuning and hybrid evaluation of open large language models on
-textual poker decision states (6-max No-Limit Texas Hold'em), covering both
-preflop and postflop decisions. Categorical action prediction and numerical
-bet/raise sizing are reported both separately and through a continuous joint
-score.
+Supervised fine-tuning and hybrid evaluation of open large language models as
+predictors of PokerBench-derived reference decisions for isolated 6-max
+No-Limit Texas Hold'em states, covering both preflop and postflop decisions.
+Categorical action prediction and numerical bet/raise sizing are reported
+both separately and through a continuous joint score.
 
 See `CITATION.cff` for citation information.
 
-## Hybrid evaluation pipeline
+## Main contributions
 
-Each decision is scored in two stages:
+- Systematic evaluation of few-shot prompting and supervised adaptation in
+  preflop and postflop.
+- Hybrid inference and evaluation pipeline separating categorical action
+  scoring from numerical sizing generation.
+- Continuous Ac-s metric and conditional proportional sizing diagnostic.
 
-1. **Action.** The action (fold / call / check / bet / raise) is selected by
-   comparing the next-token log-probability of each available action -- no
-   text is generated for this step.
-2. **Sizing.** A short deterministic generation is invoked whenever the
-   selected or reference action is aggressive, allowing sizing information
-   to be retained for evaluation and diagnostics.
+## Method overview
 
-`evaluation/hybrid_evaluator.py` owns parsing, prompting, model loading, and
-I/O for this pipeline. `evaluation/metrics.py` owns only the scoring math
-below and has no dependency on this pipeline, PokerBench, or
-Transformers/torch -- it operates on already-parsed action/size pairs.
+Two independent QLoRA (4-bit NF4) adapters are trained on top of Qwen3-14B:
+one for preflop decisions and one for postflop decisions, using
+PokerBench-derived reference decisions expressed as `action` or
+`action size` (e.g., `raise 7.0`). The preflop trainer
+(`training/train_preflop.py`) supervises the complete response, including
+both the action and the numeric sizing. Both training scripts reproduce the
+configurations used to produce the results below.
+
+At evaluation time, `evaluation/hybrid_evaluator.py` scores each decision in
+two stages: the action is selected by comparing the next-token
+log-probability of each available action, with no text generated; a short,
+deterministic generation is then used to produce the numeric size only when
+the selected or reference action is aggressive. `evaluation/metrics.py`
+scores the resulting action/size pairs and has no dependency on this
+pipeline, PokerBench, or Transformers/torch.
+
+## Key results
+
+| Stage    | Setting                | Ac         | Ac-s       |
+|----------|-------------------------|-----------:|-----------:|
+| Preflop  | Few-shot Qwen3-14B      | 76.1 ± 2.6 | 71.4 ± 2.6 |
+| Preflop  | Fine-tuned Qwen3-14B    | 93.3       | 93.2       |
+| Postflop | Few-shot Qwen3-14B      | 51.5 ± 2.4 | 50.3 ± 2.5 |
+| Postflop | Fine-tuned Qwen3-14B    | 91.8       | 91.6       |
+
+Conditional sizing scores reach 0.994 preflop over 221 eligible decisions
+and 0.992 postflop over 2,168 decisions. Once the aggressive action is
+correctly identified, both stage-specific adapters recover its numerical
+sizing with high proportional agreement.
 
 ## Continuous Action–Sizing accuracy (Ac-s)
 
-**Sizing similarity.** For a gold size $s > 0$ and a predicted size $\hat{s} > 0$:
+**Sizing similarity.** For a reference size $s > 0$ and a predicted size $\hat{s} > 0$:
 
 $$\mathrm{sim}(s, \hat{s}) = \exp\left(-\left|\log(\hat{s} / s)\right|\right)$$
 
 This equals 1 for an exact match and decays smoothly and symmetrically as the
-predicted size diverges from the gold size in either direction (in log space).
+predicted size diverges from the reference size in either direction (in log space).
 
-**Per-sample Ac-s.** For sample $i$ with gold action $a_i$ and predicted action $\hat{a}_i$:
+**Per-sample Ac-s.** For sample $i$ with reference action $a_i$ and predicted action $\hat{a}_i$:
 
 $$
 \mathrm{Ac\text{-}s}_i =
@@ -62,40 +86,22 @@ $$\mathrm{Conditional\ Sizing\ Score} = \frac{1}{|E|}\sum_{i \in E} \mathrm{sim}
 It is undefined (not zero) when $E$ is empty, and isolates numerical sizing
 quality from action-classification errors.
 
-## Results
+## Repository structure
 
-Supervised fine-tuning brings substantial gains over few-shot prompting in
-both preflop and postflop decision-making, with the corrected preflop trainer
-(`training/train_preflop.py`) jointly supervising the action and the numeric
-sizing under a response-only loss. The hybrid evaluator
-(`evaluation/hybrid_evaluator.py`) treats action selection and sizing
-generation as separate steps and then combines them through the continuous
-Action–Sizing accuracy (Ac-s) defined above.
+```
+README.md
+requirements.txt
+CITATION.cff
+training/
+evaluation/
+examples/
+```
 
-Detailed results, statistical significance tests, robustness checks, and
-ablation studies are reported in the dissertation and the associated papers
-(see Research outputs below).
+## Installation
 
-## Research outputs
-
-Related research outputs include:
-
-- **ENIAC 2025** -- *Evaluation of LLMs for Effective Recommendation of Poker
-  Strategies* -- [DOI](https://doi.org/10.5753/eniac.2025.12461) -- published.
-- **BRACIS 2026** -- *Supervised Fine-Tuning of Large Language Models for
-  Strategic Decision-Making in Poker* -- accepted for presentation and
-  publication.
-- An associated MSc dissertation, *Learning Strategic Poker Decision-Making
-  with Large Language Models*.
-
-## Data
-
-PokerBench ([repository](https://github.com/pokerllm/pokerbench),
-[DOI](https://doi.org/10.1609/aaai.v39i24.34814)) supplies the textual
-poker-state formulation and reference decisions used to produce the results
-above, as the source of the experimental data rather than a code dependency.
-Model adapters, PokerBench datasets, and prediction files are not
-redistributed in this repository.
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
@@ -118,3 +124,49 @@ python training/train_preflop.py --dataset-path /path/to/preflop_train.json --ou
 # Postflop training
 python training/train_postflop.py --train-path /path/to/postflop_train.json --test-path /path/to/postflop_test.json --output-dir out/postflop
 ```
+
+## Data and model availability
+
+The experiments use PokerBench-derived decision data and Qwen3-14B base
+checkpoints, which are not redistributed in this repository. The small files
+under `examples/` only illustrate the expected input format and support
+lightweight execution tests.
+
+## Reproducibility and scope
+
+The repository provides the training scripts, hybrid evaluator, metric
+implementation, and small format examples. Reproducing the reported results
+requires compatible PokerBench-formatted data, the corresponding base-model
+checkpoints, and GPU compute.
+
+Reported scores measure agreement with PokerBench-derived reference decisions
+for isolated states. They do not establish poker solving, equilibrium
+computation, exploitability guarantees, opponent adaptation, or
+complete-match performance.
+
+## Research outputs
+
+Related research outputs include:
+
+- **ENIAC 2025** -- *Evaluation of LLMs for Effective Recommendation of Poker
+  Strategies* -- [DOI](https://doi.org/10.5753/eniac.2025.12461) -- published.
+- **BRACIS 2026** -- *Supervised Fine-Tuning of Large Language Models for
+  Strategic Decision-Making in Poker* -- accepted for presentation and
+  publication.
+- **MSc dissertation** -- *Learning Strategic Poker Decision-Making with
+  Large Language Models* -- published in the UFU repository, with DOI.
+- **IEEE Transactions on Games manuscript** -- under review.
+
+## Citation
+
+```
+Title: Learning Strategic Poker Decision-Making with Large Language Models
+Author: Lucas de Oliveira Diniz
+Institution: Federal University of Uberlândia
+Year: 2026
+Dissertation DOI: 10.14393/ufu.di.2026.510
+ORCID: 0000-0001-7233-8906
+Advisor: Murillo Guimarães Carneiro
+```
+
+See `CITATION.cff` for the machine-readable version of this citation metadata.

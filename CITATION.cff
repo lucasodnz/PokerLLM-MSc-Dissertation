@@ -3,9 +3,23 @@ message: If you use this software, please cite it as below.
 authors:
   - family-names: Diniz
     given-names: Lucas de Oliveira
+    affiliation: "Federal University of Uberlândia"
+    orcid: "https://orcid.org/0000-0001-7233-8906"
 title: "PokerLLM: Learning Strategic Poker Decision-Making with Large Language Models"
 version: 2.0.0
 date-released: "2026-08-03"
 type: software
 repository-code: "https://github.com/lucasodnz/PokerLLM-MSc-Dissertation"
 url: "https://github.com/lucasodnz/PokerLLM-MSc-Dissertation"
+preferred-citation:
+  type: thesis
+  title: "Learning Strategic Poker Decision-Making with Large Language Models"
+  authors:
+    - family-names: Diniz
+      given-names: Lucas de Oliveira
+      affiliation: "Federal University of Uberlândia"
+      orcid: "https://orcid.org/0000-0001-7233-8906"
+  institution:
+    name: "Federal University of Uberlândia"
+  doi: "10.14393/ufu.di.2026.510"
+  year: 2026

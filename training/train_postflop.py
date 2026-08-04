@@ -17,7 +17,6 @@ import random
 import numpy as np
 from dataclasses import dataclass
 from typing import Optional, List, Dict
-from tqdm import tqdm
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -468,13 +467,12 @@ def main():
     with open(results_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2)
     
-    # 4. Comparação
-    print("\n📊 COMPARAÇÃO COM BASELINE (47.7% few-shot):")
-    if accuracy > 0.477:
-        print(f"  🎉 MELHORIA: +{(accuracy - 0.477)*100:.1f}%")
-    else:
-        print(f"  ⚠️  REGRESSÃO: -{(0.477 - accuracy)*100:.1f}%")
-        print(f"  💡 Considere: Aumentar dados ou ajustar hyperparameters")
+    # Note: this is a quick, single-token sanity check on 500 samples, not
+    # the dissertation's official evaluation protocol (see
+    # evaluation/hybrid_evaluator.py for that). It is not directly
+    # comparable to the reported few-shot Postflop Ac.
+    print(f"\nQuick sanity-check accuracy: {accuracy*100:.1f}% "
+          f"(500-sample, single-token check -- not the paper's official metric)")
 
 if __name__ == "__main__":
     main()
