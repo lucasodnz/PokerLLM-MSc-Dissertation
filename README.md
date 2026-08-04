@@ -86,63 +86,14 @@ $$\mathrm{Conditional\ Sizing\ Score} = \frac{1}{|E|}\sum_{i \in E} \mathrm{sim}
 It is undefined (not zero) when $E$ is empty, and isolates numerical sizing
 quality from action-classification errors.
 
-## Repository structure
+## Dataset
 
-```
-README.md
-requirements.txt
-CITATION.cff
-training/
-evaluation/
-examples/
-```
+The experiments use preflop and postflop decision data from PokerBench:
+https://github.com/ruizhang-ai/PokerBench
 
-## Installation
-
-```bash
-pip install -r requirements.txt
-```
-
-## Usage
-
-```bash
-# Fine-tuned adapter, hybrid evaluation
-python evaluation/hybrid_evaluator.py \
-    --mode lora --adapter /path/to/adapter \
-    --dataset examples/preflop.json \
-    --predictions-csv preds.csv --metrics-json metrics.json
-
-# Few-shot baseline (base model, no adapter)
-python evaluation/hybrid_evaluator.py \
-    --mode fewshot --train-dataset /path/to/train.json \
-    --dataset examples/postflop.json \
-    --predictions-csv preds.csv --metrics-json metrics.json
-
-# Preflop training
-python training/train_preflop.py --dataset-path /path/to/preflop_train.json --output-dir out/preflop
-
-# Postflop training
-python training/train_postflop.py --train-path /path/to/postflop_train.json --test-path /path/to/postflop_test.json --output-dir out/postflop
-```
-
-## Data and model availability
-
-The experiments use PokerBench-derived decision data and Qwen3-14B base
-checkpoints, which are not redistributed in this repository. The small files
-under `examples/` only illustrate the expected input format and support
-lightweight execution tests.
-
-## Reproducibility and scope
-
-The repository provides the training scripts, hybrid evaluator, metric
-implementation, and small format examples. Reproducing the reported results
-requires compatible PokerBench-formatted data, the corresponding base-model
-checkpoints, and GPU compute.
-
-Reported scores measure agreement with PokerBench-derived reference decisions
-for isolated states. They do not establish poker solving, equilibrium
-computation, exploitability guarantees, opponent adaptation, or
-complete-match performance.
+PokerBench provides the structured textual poker states and reference
+decisions used for training and evaluation. The dataset is not redistributed
+in this repository.
 
 ## Research outputs
 
