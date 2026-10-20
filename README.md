@@ -105,13 +105,15 @@ Related research outputs include:
   Strategic Decision-Making in Poker* -- LNCS, Intelligent Systems, pp. 95--110 --
   [DOI](https://doi.org/10.1007/978-3-032-39895-6_7) -- published.
 - **MSc dissertation** -- *Learning Strategic Poker Decision-Making with
-  Large Language Models* -- published in the UFU repository, with DOI.
+  Large Language Models* -- Federal University of Uberlândia --
+  [DOI](https://doi.org/10.14393/ufu.di.2026.510) -- published.
 - **IEEE Transactions on Games manuscript** -- under review.
 
 ## Citation
 
 If you use this code or the Ac-s metric, please cite the BRACIS 2026 paper
-and the MSc dissertation.
+and the MSc dissertation. The ENIAC 2025 paper covers the earlier few-shot
+evaluation of LLMs on poker decisions.
 
 ### BRACIS 2026 paper
 
@@ -159,6 +161,31 @@ Uberl\^{a}ndia, Brazil, 2026, doi: 10.14393/ufu.di.2026.510.
   year    = {2026},
   doi     = {10.14393/ufu.di.2026.510},
   note    = {Advisor: Murillo Guimar{\~a}es Carneiro}
+}
+```
+
+### ENIAC 2025 paper
+
+DOI: [10.5753/eniac.2025.12461](https://doi.org/10.5753/eniac.2025.12461)
+
+```latex
+\bibitem{diniz2025eniac}
+L.~O. Diniz and M.~G. Carneiro, ``Evaluation of LLMs for effective
+recommendation of poker strategies,'' in \emph{Anais do XXII Encontro Nacional
+de Intelig\^{e}ncia Artificial e Computacional (ENIAC 2025)}. Porto Alegre:
+SBC, 2025, pp. 379--390, doi: 10.5753/eniac.2025.12461.
+```
+
+```bibtex
+@inproceedings{diniz2025eniac,
+  author    = {Diniz, Lucas de Oliveira and Carneiro, Murillo Guimar{\~a}es},
+  title     = {Evaluation of LLMs for Effective Recommendation of Poker Strategies},
+  booktitle = {Anais do XXII Encontro Nacional de Intelig{\^e}ncia Artificial e Computacional (ENIAC 2025)},
+  publisher = {Sociedade Brasileira de Computa{\c{c}}{\~a}o},
+  address   = {Porto Alegre, RS, Brasil},
+  pages     = {379--390},
+  year      = {2025},
+  doi       = {10.5753/eniac.2025.12461}
 }
 ```
 

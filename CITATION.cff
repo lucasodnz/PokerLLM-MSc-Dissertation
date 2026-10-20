@@ -46,3 +46,17 @@ references:
     thesis-type: "Master's dissertation"
     doi: "10.14393/ufu.di.2026.510"
     year: 2026
+  - type: conference-paper
+    title: "Evaluation of LLMs for Effective Recommendation of Poker Strategies"
+    authors:
+      - family-names: Diniz
+        given-names: Lucas de Oliveira
+      - family-names: Carneiro
+        given-names: Murillo Guimarães
+    collection-title: "Anais do XXII Encontro Nacional de Inteligência Artificial e Computacional (ENIAC 2025)"
+    publisher:
+      name: "Sociedade Brasileira de Computação"
+    start: 379
+    end: 390
+    doi: "10.5753/eniac.2025.12461"
+    year: 2025
