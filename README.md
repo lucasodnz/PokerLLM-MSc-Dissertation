@@ -102,22 +102,64 @@ Related research outputs include:
 - **ENIAC 2025** -- *Evaluation of LLMs for Effective Recommendation of Poker
   Strategies* -- [DOI](https://doi.org/10.5753/eniac.2025.12461) -- published.
 - **BRACIS 2026** -- *Supervised Fine-Tuning of Large Language Models for
-  Strategic Decision-Making in Poker* -- accepted for presentation and
-  publication.
+  Strategic Decision-Making in Poker* -- LNCS, Intelligent Systems, pp. 95--110 --
+  [DOI](https://doi.org/10.1007/978-3-032-39895-6_7) -- published.
 - **MSc dissertation** -- *Learning Strategic Poker Decision-Making with
   Large Language Models* -- published in the UFU repository, with DOI.
 - **IEEE Transactions on Games manuscript** -- under review.
 
 ## Citation
 
+If you use this code or the Ac-s metric, please cite the BRACIS 2026 paper
+and the MSc dissertation.
+
+### BRACIS 2026 paper
+
+DOI: [10.1007/978-3-032-39895-6_7](https://doi.org/10.1007/978-3-032-39895-6_7)
+
+```latex
+\bibitem{diniz2026bracis}
+L.~O. Diniz and M.~G. Carneiro, ``Supervised fine-tuning of large language
+models for strategic decision-making in poker,'' in \emph{Intelligent Systems
+(BRACIS 2026)}, ser. Lecture Notes in Computer Science. Cham: Springer, 2026,
+pp. 95--110, doi: 10.1007/978-3-032-39895-6\_7.
 ```
-Title: Learning Strategic Poker Decision-Making with Large Language Models
-Author: Lucas de Oliveira Diniz
-Institution: Federal University of Uberlândia
-Year: 2026
-Dissertation DOI: 10.14393/ufu.di.2026.510
-ORCID: 0000-0001-7233-8906
-Advisor: Murillo Guimarães Carneiro
+
+```bibtex
+@inproceedings{diniz2026bracis,
+  author    = {Diniz, Lucas de Oliveira and Carneiro, Murillo Guimar{\~a}es},
+  title     = {Supervised Fine-Tuning of Large Language Models for Strategic Decision-Making in Poker},
+  booktitle = {Intelligent Systems -- 15th Brazilian Conference on Intelligent Systems (BRACIS 2026)},
+  series    = {Lecture Notes in Computer Science},
+  publisher = {Springer Nature Switzerland},
+  address   = {Cham},
+  pages     = {95--110},
+  year      = {2026},
+  doi       = {10.1007/978-3-032-39895-6_7}
+}
+```
+
+### MSc dissertation
+
+DOI: [10.14393/ufu.di.2026.510](https://doi.org/10.14393/ufu.di.2026.510)
+
+```latex
+\bibitem{diniz2026dissertation}
+L.~O. Diniz, ``Learning strategic poker decision-making with large language
+models,'' M.Sc. dissertation, Federal University of Uberl\^{a}ndia,
+Uberl\^{a}ndia, Brazil, 2026, doi: 10.14393/ufu.di.2026.510.
+```
+
+```bibtex
+@mastersthesis{diniz2026dissertation,
+  author  = {Diniz, Lucas de Oliveira},
+  title   = {Learning Strategic Poker Decision-Making with Large Language Models},
+  school  = {Federal University of Uberl{\^a}ndia},
+  address = {Uberl{\^a}ndia, Brazil},
+  year    = {2026},
+  doi     = {10.14393/ufu.di.2026.510},
+  note    = {Advisor: Murillo Guimar{\~a}es Carneiro}
+}
 ```
 
 See `CITATION.cff` for the machine-readable version of this citation metadata.
