@@ -12,14 +12,37 @@ type: software
 repository-code: "https://github.com/lucasodnz/PokerLLM-MSc-Dissertation"
 url: "https://github.com/lucasodnz/PokerLLM-MSc-Dissertation"
 preferred-citation:
-  type: thesis
-  title: "Learning Strategic Poker Decision-Making with Large Language Models"
+  type: conference-paper
+  title: "Supervised Fine-Tuning of Large Language Models for Strategic Decision-Making in Poker"
   authors:
     - family-names: Diniz
       given-names: Lucas de Oliveira
       affiliation: "Federal University of Uberlândia"
       orcid: "https://orcid.org/0000-0001-7233-8906"
-  institution:
-    name: "Federal University of Uberlândia"
-  doi: "10.14393/ufu.di.2026.510"
+    - family-names: Carneiro
+      given-names: Murillo Guimarães
+      affiliation: "Federal University of Uberlândia"
+  collection-title: "Intelligent Systems (BRACIS 2026)"
+  collection-type: proceedings
+  conference:
+    name: "15th Brazilian Conference on Intelligent Systems (BRACIS 2026)"
+    city: "Cuiabá"
+    country: BR
+  series: "Lecture Notes in Computer Science"
+  publisher:
+    name: "Springer Nature Switzerland"
+  start: 95
+  end: 110
+  doi: "10.1007/978-3-032-39895-6_7"
   year: 2026
+references:
+  - type: thesis
+    title: "Learning Strategic Poker Decision-Making with Large Language Models"
+    authors:
+      - family-names: Diniz
+        given-names: Lucas de Oliveira
+    institution:
+      name: "Federal University of Uberlândia"
+    thesis-type: "Master's dissertation"
+    doi: "10.14393/ufu.di.2026.510"
+    year: 2026
